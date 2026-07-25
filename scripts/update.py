@@ -5,6 +5,57 @@ from pathlib import Path
 
 
 CONFIG_FILE = Path("output/shadowrocket.conf")
+RULE_FILES = {
+    "DIRECT": Path("rules/direct.list"),
+    "PROXY": Path("rules/proxy.list"),
+    "REJECT": Path("rules/reject.list"),
+}
+CUSTOM_RULES_START = "# BEGIN LOCAL CUSTOM RULES"
+CUSTOM_RULES_END = "# END LOCAL CUSTOM RULES"
+
+
+def build_custom_rules_block(rule_files: dict[str, Path]) -> str:
+    lines = [CUSTOM_RULES_START]
+
+    for policy, rule_file in rule_files.items():
+        if not rule_file.exists():
+            raise FileNotFoundError(rule_file)
+
+        lines.append(f"# Local custom {policy} rules")
+
+        for line in rule_file.read_text(encoding="utf-8").splitlines():
+            if not line or line.lstrip().startswith("#"):
+                lines.append(line)
+            else:
+                lines.append(f"{line},{policy}")
+
+    lines.append(CUSTOM_RULES_END)
+    return "\n".join(lines)
+
+
+def remove_custom_rules_block(text: str) -> str:
+    while CUSTOM_RULES_START in text:
+        start = text.index(CUSTOM_RULES_START)
+        end = text.index(CUSTOM_RULES_END, start) + len(CUSTOM_RULES_END)
+
+        if end < len(text) and text[end] == "\n":
+            end += 1
+
+        text = text[:start] + text[end:]
+
+    return text
+
+
+def inject_custom_rules(text: str, rule_files: dict[str, Path]) -> str:
+    if "[Rule]" not in text:
+        raise ValueError("Configuration does not contain a [Rule] section.")
+
+    if "FINAL,direct" not in text:
+        raise ValueError("Configuration does not contain FINAL,direct.")
+
+    text = remove_custom_rules_block(text)
+    block = build_custom_rules_block(rule_files)
+    return text.replace("FINAL,direct", f"{block}\nFINAL,direct", 1)
 
 
 def get_nextdns_url() -> str:
@@ -82,6 +133,7 @@ def main():
         original,
         nextdns,
     )
+    updated = inject_custom_rules(updated, RULE_FILES)
 
     if original == updated:
         print("配置无需修改。")
