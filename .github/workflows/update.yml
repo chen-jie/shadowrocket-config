@@ -1,7 +1,15 @@
 name: Update Shadowrocket Config
 
 on:
+  # 手动执行
   workflow_dispatch:
+
+  # 每天 UTC 03:00 自动执行
+  schedule:
+    - cron: "0 3 * * *"
+
+permissions:
+  contents: write
 
 jobs:
   update:
@@ -11,24 +19,37 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Download Config
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download Latest Shadowrocket Config
         run: |
           mkdir -p output
-          curl -L \
-          https://raw.githubusercontent.com/Johnshall/Shadowrocket-ADBlock-Rules-Forever/release/sr_top500_banlist_ad.conf \
-          -o output/shadowrocket.conf
 
-      - name: Show First Lines
+          curl -L \
+            https://raw.githubusercontent.com/Johnshall/Shadowrocket-ADBlock-Rules-Forever/release/sr_top500_banlist_ad.conf \
+            -o output/shadowrocket.conf
+
+      - name: Patch Config
+        env:
+          NEXTDNS_PROFILE: ${{ secrets.NEXTDNS_PROFILE }}
         run: |
-          head -20 output/shadowrocket.conf
+          python scripts/update.py
 
       - name: Commit Changes
         run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           git add output/shadowrocket.conf
 
-          git diff --cached --quiet || git commit -m "Auto update Shadowrocket config"
+          if git diff --cached --quiet; then
+            echo "No changes."
+            exit 0
+          fi
+
+          git commit -m "Auto update Shadowrocket config"
 
           git push
