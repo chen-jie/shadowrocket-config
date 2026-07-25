@@ -4,12 +4,20 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  update:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Hello
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download Config
         run: |
-          echo "Hello Shadowrocket"
-          pwd
-          ls -la
+          mkdir -p output
+          curl -L \
+          https://raw.githubusercontent.com/Johnshall/Shadowrocket-ADBlock-Rules-Forever/release/sr_top500_banlist_ad.conf \
+          -o output/shadowrocket.conf
+
+      - name: Show First Lines
+        run: |
+          head -20 output/shadowrocket.conf
