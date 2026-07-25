@@ -22,7 +22,7 @@ class CustomRulesTests(unittest.TestCase):
         rule_file.write_text(content, encoding="utf-8")
         return rule_file
 
-    def test_inject_custom_rules_preserves_comments_and_precedes_final(self):
+    def test_inject_custom_rules_precedes_upstream_rules(self):
         rule_files = {
             "DIRECT": self.write_rule_file(
                 "direct.list", "# LAN devices\nDOMAIN-SUFFIX,lan.example\n"
@@ -35,15 +35,20 @@ class CustomRulesTests(unittest.TestCase):
             ),
         }
 
-        result = update.inject_custom_rules("[Rule]\nFINAL,direct\n", rule_files)
+        result = update.inject_custom_rules(
+            "[Rule]\nDOMAIN-SUFFIX,upstream.example,Proxy\nFINAL,direct\n",
+            rule_files,
+        )
 
         self.assertIn("# Local custom DIRECT rules", result)
         self.assertIn("# LAN devices", result)
         self.assertIn("DOMAIN-SUFFIX,lan.example,DIRECT", result)
         self.assertIn("DOMAIN-SUFFIX,proxy.example,PROXY", result)
         self.assertIn("DOMAIN-SUFFIX,ads.example,REJECT", result)
+        self.assertLess(result.index("[Rule]"), result.index("# BEGIN LOCAL CUSTOM RULES"))
         self.assertLess(
-            result.index("# BEGIN LOCAL CUSTOM RULES"), result.index("FINAL,direct")
+            result.index("# BEGIN LOCAL CUSTOM RULES"),
+            result.index("DOMAIN-SUFFIX,upstream.example,Proxy"),
         )
 
     def test_inject_custom_rules_replaces_existing_generated_block(self):

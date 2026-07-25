@@ -55,7 +55,7 @@ def inject_custom_rules(text: str, rule_files: dict[str, Path]) -> str:
 
     text = remove_custom_rules_block(text)
     block = build_custom_rules_block(rule_files)
-    return text.replace("FINAL,direct", f"{block}\nFINAL,direct", 1)
+    return text.replace("[Rule]", f"[Rule]\n{block}", 1)
 
 
 def get_nextdns_url() -> str:
