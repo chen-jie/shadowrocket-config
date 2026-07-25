@@ -21,3 +21,14 @@ jobs:
       - name: Show First Lines
         run: |
           head -20 output/shadowrocket.conf
+
+      - name: Commit Changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add output/shadowrocket.conf
+
+          git diff --cached --quiet || git commit -m "Auto update Shadowrocket config"
+
+          git push
