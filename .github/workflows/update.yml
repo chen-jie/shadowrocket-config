@@ -6,7 +6,7 @@ on:
 
   # 每天 UTC 03:00 自动执行
   schedule:
-    - cron: "0 3 * * *"
+    - cron: "7 4 * * *"
 
 permissions:
   contents: write
